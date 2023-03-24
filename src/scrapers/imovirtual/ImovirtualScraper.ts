@@ -1,12 +1,12 @@
 import { Browser, firefox, Locator, Page } from 'playwright';
-import { Property } from '../../types';
+import { PropertySource, PropertyWithoutId } from '../../types';
 import { parsePortugueseNumber } from '../../utils';
 import { Scraper } from '../Scraper';
 import { readTextFromLocator } from '../utils';
 
 const IMO_COOKIE_BUTTON_SELECTOR = '#onetrust-accept-btn-handler';
 
-export class ImovirtualScraper extends Scraper<Property> {
+export class ImovirtualScraper extends Scraper<PropertyWithoutId> {
   async destroy(): Promise<void> {
     if (this.page) {
       await this.page.close();
@@ -41,7 +41,7 @@ export class ImovirtualScraper extends Scraper<Property> {
     return Number.isNaN(parsedNumber) ? null : parsedNumber;
   }
 
-  async scrape(): Promise<Property[]> {
+  async scrape(): Promise<PropertyWithoutId[]> {
     if (!this.page) throw new Error('Scraper not initialized');
     if (!process.env.IMOVIRTUAL_SEARCH_INITIAL_PAGE) throw new Error('Imovirtual page is not set');
 
@@ -49,7 +49,7 @@ export class ImovirtualScraper extends Scraper<Property> {
     await this.page.waitForSelector('article');
     const locators = await this.page.locator('article');
 
-    const properties: Property[] = [];
+    const properties: PropertyWithoutId[] = [];
     for (const propertyLocator of await locators.all()) {
       await propertyLocator.scrollIntoViewIfNeeded();
       const areaInM3 = await this.readAreaFromArticle(propertyLocator);
@@ -63,15 +63,15 @@ export class ImovirtualScraper extends Scraper<Property> {
           await readTextFromLocator(propertyLocator.locator('.offer-item-price')),
         ) ?? 0;
 
-      const property: Property = {
+      const property: PropertyWithoutId = {
         areaInM3,
         description,
         energyCertification: '',
-        id,
+        externalId: id,
         link,
         location: '',
         price,
-        source: 'imovirtual',
+        source: PropertySource.IMOVIRTUAL,
       };
 
       properties.push(property);
