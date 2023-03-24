@@ -41,42 +41,63 @@ export class ImovirtualScraper extends Scraper<PropertyWithoutId> {
     return Number.isNaN(parsedNumber) ? null : parsedNumber;
   }
 
+  private async getNextPageHelpers(page: Page) {
+    const nextPageLocator = page.locator('li.pager-next a:not(.disabled)').first();
+    const hasNextPage = !!(await nextPageLocator.count());
+
+    return { nextPageLocator, hasNextPage };
+  }
+
   async scrape(): Promise<PropertyWithoutId[]> {
     if (!this.page) throw new Error('Scraper not initialized');
     if (!process.env.IMOVIRTUAL_SEARCH_INITIAL_PAGE) throw new Error('Imovirtual page is not set');
 
     await this.page.goto(process.env.IMOVIRTUAL_SEARCH_INITIAL_PAGE);
+
     await this.page.waitForSelector('article');
-    const locators = await this.page.locator('article');
+    let { nextPageLocator, hasNextPage } = await this.getNextPageHelpers(this.page);
 
     const properties: PropertyWithoutId[] = [];
-    for (const propertyLocator of await locators.all()) {
-      await propertyLocator.scrollIntoViewIfNeeded();
-      const areaInM3 = await this.readAreaFromArticle(propertyLocator);
-      const description = await readTextFromLocator(
-        propertyLocator.locator('span.offer-item-title'),
-      );
-      const id = (await propertyLocator.getAttribute('data-item-id')) ?? '';
-      const link = (await propertyLocator.locator('a').first().getAttribute('href')) ?? '';
-      const price =
-        parsePortugueseNumber(
-          await readTextFromLocator(propertyLocator.locator('.offer-item-price')),
-        ) ?? 0;
+    do {
+      const locators = this.page.locator('article');
 
-      const property: PropertyWithoutId = {
-        areaInM3,
-        description,
-        energyCertification: '',
-        externalId: id,
-        link,
-        location: '',
-        price,
-        source: PropertySource.IMOVIRTUAL,
-      };
+      for (const propertyLocator of await locators.all()) {
+        await propertyLocator.scrollIntoViewIfNeeded();
+        const areaInM3 = await this.readAreaFromArticle(propertyLocator);
+        const description = await readTextFromLocator(
+          propertyLocator.locator('span.offer-item-title'),
+        );
+        const id = (await propertyLocator.getAttribute('data-item-id')) ?? '';
+        const link = (await propertyLocator.locator('a').first().getAttribute('href')) ?? '';
+        const price =
+          parsePortugueseNumber(
+            await readTextFromLocator(propertyLocator.locator('.offer-item-price')),
+          ) ?? 0;
 
-      properties.push(property);
-    }
+        const property: PropertyWithoutId = {
+          areaInM3,
+          description,
+          energyCertification: '',
+          externalId: id,
+          link,
+          location: '',
+          price,
+          source: PropertySource.IMOVIRTUAL,
+        };
 
+        properties.push(property);
+      }
+
+      if (hasNextPage) {
+        await nextPageLocator.click();
+        await this.page.waitForSelector('article');
+        const helpers = await this.getNextPageHelpers(this.page);
+        nextPageLocator = helpers.nextPageLocator;
+        hasNextPage = helpers.hasNextPage;
+      } else {
+        break;
+      }
+    } while (true);
     return properties;
   }
 }
