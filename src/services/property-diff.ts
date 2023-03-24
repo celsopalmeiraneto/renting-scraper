@@ -115,11 +115,18 @@ export const generateDiffFromScraped = async (
   });
 
   const newAndChanges = await Promise.all(promises);
+  const filteredNewAndChanges = newAndChanges.filter((diff) => {
+    if (diff.type !== 'changed') return true;
+
+    if (Object.keys(diff.changes).length > 0) return true;
+
+    return false;
+  });
 
   const removedItems = await repo.findBy({
     id: Not(In(newAndChanges.filter((v) => v.type === 'changed').map((v) => v.entity.id))),
   });
   const deleted = removedItems.map<Diff>((entity) => ({ type: 'deleted', entity }));
 
-  return [...newAndChanges, ...deleted];
+  return [...filteredNewAndChanges, ...deleted];
 };
