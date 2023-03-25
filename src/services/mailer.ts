@@ -13,7 +13,11 @@ const templateText = `
       {{#with entity}}
         <tr>
           <td>Area:</td><td>{{areaInM3}}</td><td>{{../changes.areaInM3.newValue}}</td>
+        </tr>
+        <tr>
           <td>Energy Certification:</td><td>{{energyCertification}}</td><td>{{../changes.energyCertification.newValue}}</td>
+        </tr>
+        <tr>  
           <td>Location:</td><td>{{location}}</td><td>{{../changes.location.newValue}}</td>
         </tr>
       {{/with}}

@@ -41,6 +41,15 @@ export class ImovirtualScraper extends Scraper<PropertyWithoutId> {
     return Number.isNaN(parsedNumber) ? null : parsedNumber;
   }
 
+  private async readLocation(articleLocator: Locator) {
+    const liLocator = articleLocator.locator('p.text-nowrap');
+
+    if (!liLocator) return null;
+
+    const text = await readTextFromLocator(liLocator);
+    return text.split(':')[1]?.trim();
+  }
+
   private async getNextPageHelpers(page: Page) {
     const nextPageLocator = page.locator('li.pager-next a:not(.disabled)').first();
     const hasNextPage = !!(await nextPageLocator.count());
@@ -73,14 +82,21 @@ export class ImovirtualScraper extends Scraper<PropertyWithoutId> {
           parsePortugueseNumber(
             await readTextFromLocator(propertyLocator.locator('.offer-item-price')),
           ) ?? 0;
+        const location = (await this.readLocation(propertyLocator)) ?? '';
+
+        const hasEnergyCertification =
+          (await propertyLocator.locator('.energy-certify').count()) > 0;
+        const energyCertification = hasEnergyCertification
+          ? (await readTextFromLocator(propertyLocator.locator('.energy-certify'))) ?? ''
+          : '';
 
         const property: PropertyWithoutId = {
           areaInM3,
           description,
-          energyCertification: '',
+          energyCertification,
           externalId: id,
           link,
-          location: '',
+          location,
           price,
           source: PropertySource.IMOVIRTUAL,
         };
