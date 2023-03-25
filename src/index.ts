@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { scraperDataSource } from './data-sources';
 import { ImovirtualScraper } from './scrapers/imovirtual/ImovirtualScraper';
 import { sendEmail } from './services/mailer';
-import { generateDiffFromScraped } from './services/property-diff';
+import { generateDiffFromScraped, persistDiffOnDb } from './services/property-diff';
 
 const main = async () => {
   await scraperDataSource.initialize();
@@ -18,6 +18,7 @@ const main = async () => {
   if (consolidatedItems.length === 0) return;
 
   await sendEmail(consolidatedItems);
+  await persistDiffOnDb(consolidatedItems);
 };
 
 (async () => {

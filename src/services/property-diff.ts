@@ -130,3 +130,27 @@ export const generateDiffFromScraped = async (
 
   return [...filteredNewAndChanges, ...deleted];
 };
+
+export const persistDiffOnDb = async (diffSet: Diff[]) => {
+  const repo = scraperDataSource.getRepository(PropertyEntity);
+  const promises = diffSet.map(async (item) => {
+    if (item.type === 'changed') {
+      const newValues = Object.entries(item.changes).reduce((acc, [key, value]) => {
+        acc[key] = value.newValue;
+        return acc;
+      }, {} as Record<string, unknown>);
+
+      await repo.update({ id: item.entity.id }, newValues);
+    }
+
+    if (item.type === 'deleted') {
+      await repo.delete({ id: item.entity.id });
+    }
+
+    if (item.type === 'new') {
+      await repo.insert(item.entity);
+    }
+  });
+
+  await Promise.all(promises);
+};
