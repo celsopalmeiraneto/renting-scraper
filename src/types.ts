@@ -1,5 +1,6 @@
 export enum PropertySource {
   IMOVIRTUAL = 'imovirtual',
+  IDEALISTA = 'idealista',
 }
 export interface Property {
   id: string;
