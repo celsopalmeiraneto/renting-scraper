@@ -1,4 +1,5 @@
 import { compile } from 'handlebars';
+import { sortBy } from 'lodash';
 import { createTransport } from 'nodemailer';
 import { Diff } from './property-diff';
 
@@ -30,13 +31,7 @@ const templateText = `
 const template = compile(templateText);
 
 export const sendEmail = async (diffSet: Diff[]) => {
-  const sortedDiff = diffSet.sort((a, b) => {
-    if (a.type === b.type) return 0;
-
-    if (a.type > b.type) return 1;
-
-    return -1;
-  });
+  const sortedDiff = sortBy(diffSet, ['type', 'entity.location', 'entity.price']);
   const transporter = createTransport({
     host: 'email-smtp.eu-west-1.amazonaws.com',
     port: 465,
@@ -51,6 +46,6 @@ export const sendEmail = async (diffSet: Diff[]) => {
     from: 'Renting Scraper <renting-scraper@celsoneto.com.br>',
     to: process.env.MAIL_RECIPIENT,
     subject: `Properties Update - ${new Date().toLocaleString()}`,
-    html: template({ diff: diffSet }),
+    html: template({ diff: sortedDiff }),
   });
 };
