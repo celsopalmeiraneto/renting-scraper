@@ -58,3 +58,10 @@ export const sendUpdateEmail = async (diffSet: Diff[]) => {
     template({ diff: sortedDiff }),
   );
 };
+
+interface SendStatusEmail {
+  (error: Error | null, data?: string): Promise<void>;
+}
+export const sendStatusEmail: SendStatusEmail = async (error, data) => {
+  await sendEmail('Execution Results', error ? `Error: ${error.message}` : data ?? '');
+};

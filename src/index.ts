@@ -2,17 +2,23 @@ import 'reflect-metadata';
 import { scraperDataSource } from './data-sources';
 import { IdealistaScraper } from './scrapers/idealista/IdealistaScraper';
 import { ImovirtualScraper } from './scrapers/imovirtual/ImovirtualScraper';
-import { sendUpdateEmail } from './services/mailer';
+import { sendStatusEmail, sendUpdateEmail } from './services/mailer';
 import { generateDiffFromScraped, persistDiffOnDb } from './services/property-diff';
 
 const getPropertiesFromWebsite = async (
   Constructor: typeof ImovirtualScraper | typeof IdealistaScraper,
 ) => {
-  const scraper = new Constructor();
-  await scraper.initialize();
-  const properties = await scraper.scrape();
-  await scraper.destroy();
-  return properties;
+  try {
+    const scraper = new Constructor();
+    await scraper.initialize();
+    const properties = await scraper.scrape();
+    await scraper.destroy();
+    return properties;
+  } catch (error: unknown) {
+    const errorToSend = error instanceof Error ? error : new Error('Unknown error');
+    await sendStatusEmail(errorToSend);
+    return [];
+  }
 };
 
 const main = async () => {
@@ -34,5 +40,7 @@ const main = async () => {
 };
 
 (async () => {
-  await main();
+  await main().catch(async (error) => {
+    await sendStatusEmail(error);
+  });
 })();
