@@ -8,16 +8,17 @@ import { generateDiffFromScraped, persistDiffOnDb } from './services/property-di
 const getPropertiesFromWebsite = async (
   Constructor: typeof ImovirtualScraper | typeof IdealistaScraper,
 ) => {
+  const scraper = new Constructor();
   try {
-    const scraper = new Constructor();
     await scraper.initialize();
     const properties = await scraper.scrape();
-    await scraper.destroy();
     return properties;
   } catch (error: unknown) {
     const errorToSend = error instanceof Error ? error : new Error('Unknown error');
     await sendStatusEmail(errorToSend);
     return [];
+  } finally {
+    await scraper.destroy();
   }
 };
 

@@ -120,13 +120,16 @@ export class IdealistaScraper extends Scraper<PropertyWithoutId> {
 
     const properties = await this.scrapeSearchResults(this.page);
     for (const property of properties) {
-      console.log('>>>>> link', property.link);
-      // firefox was just crashing for switching pages too quick
-      await this.sleep();
-      await this.page.goto(property.link);
-      const locator = this.page.locator('span.main-info__title-minor');
-      locator.waitFor({ state: 'attached' });
-      property.location = await readTextFromLocator(locator);
+      try {
+        // firefox was just crashing for switching pages too quick
+        await this.sleep();
+        await this.page.goto(property.link);
+        const locator = this.page.locator('span.main-info__title-minor');
+        await locator.waitFor({ state: 'attached' });
+        property.location = await readTextFromLocator(locator);
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     return properties;
