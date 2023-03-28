@@ -5,20 +5,27 @@ import { ImovirtualScraper } from './scrapers/imovirtual/ImovirtualScraper';
 import { sendEmail } from './services/mailer';
 import { generateDiffFromScraped, persistDiffOnDb } from './services/property-diff';
 
+const getPropertiesFromWebsite = async (
+  Constructor: typeof ImovirtualScraper | typeof IdealistaScraper,
+) => {
+  const scraper = new Constructor();
+  await scraper.initialize();
+  const properties = await scraper.scrape();
+  await scraper.destroy();
+  return properties;
+};
+
 const main = async () => {
   await scraperDataSource.initialize();
 
-  const idealistaScraper = new IdealistaScraper();
-  await idealistaScraper.initialize();
-  const idealistaProperties = await idealistaScraper.scrape();
-  await idealistaScraper.destroy();
+  const { ENABLE_IMOVIRTUAL, ENABLE_IDEALISTA } = process.env;
 
-  const imovirtualScraper = new ImovirtualScraper();
-  await imovirtualScraper.initialize();
-  const imovirtualProperties = await imovirtualScraper.scrape();
-  await imovirtualScraper.destroy();
+  const properties = [
+    ...(ENABLE_IDEALISTA === 'true' ? await getPropertiesFromWebsite(IdealistaScraper) : []),
+    ...(ENABLE_IMOVIRTUAL === 'true' ? await getPropertiesFromWebsite(ImovirtualScraper) : []),
+  ];
 
-  const diffSet = await generateDiffFromScraped([...idealistaProperties, ...imovirtualProperties]);
+  const diffSet = await generateDiffFromScraped(properties);
 
   if (diffSet.length === 0) return;
 
