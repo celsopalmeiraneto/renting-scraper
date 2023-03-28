@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { scraperDataSource } from './data-sources';
 import { IdealistaScraper } from './scrapers/idealista/IdealistaScraper';
 import { ImovirtualScraper } from './scrapers/imovirtual/ImovirtualScraper';
-import { sendEmail } from './services/mailer';
+import { sendUpdateEmail } from './services/mailer';
 import { generateDiffFromScraped, persistDiffOnDb } from './services/property-diff';
 
 const getPropertiesFromWebsite = async (
@@ -29,7 +29,7 @@ const main = async () => {
 
   if (diffSet.length === 0) return;
 
-  await sendEmail(diffSet);
+  await sendUpdateEmail(diffSet);
   await persistDiffOnDb(diffSet);
 };
 

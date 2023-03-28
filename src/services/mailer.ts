@@ -30,8 +30,7 @@ const templateText = `
 
 const template = compile(templateText);
 
-export const sendEmail = async (diffSet: Diff[]) => {
-  const sortedDiff = sortBy(diffSet, ['type', 'entity.location', 'entity.price']);
+const sendEmail = async (subject: string, html: string) => {
   const transporter = createTransport({
     host: 'email-smtp.eu-west-1.amazonaws.com',
     port: 465,
@@ -43,9 +42,19 @@ export const sendEmail = async (diffSet: Diff[]) => {
   });
 
   await transporter.sendMail({
-    from: 'Renting Scraper <renting-scraper@celsoneto.com.br>',
+    from: `Renting Scraper ${
+      process.env.NODE_ENV !== 'production' ? process.env.NODE_ENV : ''
+    } <renting-scraper@celsoneto.com.br>`,
     to: process.env.MAIL_RECIPIENT,
-    subject: `Properties Update - ${new Date().toLocaleString()}`,
-    html: template({ diff: sortedDiff }),
+    subject,
+    html,
   });
+};
+
+export const sendUpdateEmail = async (diffSet: Diff[]) => {
+  const sortedDiff = sortBy(diffSet, ['type', 'entity.location', 'entity.price']);
+  await sendEmail(
+    `Properties Update - ${new Date().toLocaleString()}`,
+    template({ diff: sortedDiff }),
+  );
 };
