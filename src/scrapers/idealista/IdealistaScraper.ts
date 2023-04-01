@@ -6,7 +6,6 @@ import { Scraper } from '../Scraper';
 import { readTextFromLocator } from '../utils';
 
 const COOKIE_BUTTON_SELECTOR = '#didomi-notice-agree-button';
-
 const IDEALISTA_URL = new URL('https://www.idealista.pt');
 
 export class IdealistaScraper extends Scraper<PropertyWithoutId> {
@@ -27,8 +26,9 @@ export class IdealistaScraper extends Scraper<PropertyWithoutId> {
     });
     const page = await browser.newPage();
     await page.goto(IDEALISTA_URL.toString());
-    await page.waitForSelector(COOKIE_BUTTON_SELECTOR);
-    await page.click(COOKIE_BUTTON_SELECTOR);
+    const cookieSelector = page.locator(COOKIE_BUTTON_SELECTOR);
+    await cookieSelector.waitFor({ state: 'attached' });
+    await cookieSelector.click();
     this.page = page;
     this.browser = browser;
   }
