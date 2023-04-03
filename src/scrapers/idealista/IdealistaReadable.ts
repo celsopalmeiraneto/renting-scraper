@@ -1,28 +1,26 @@
-import { randomInt } from 'crypto';
-import { Browser, firefox, Locator, Page } from 'playwright';
-import { Readable, ReadableOptions } from 'stream';
+import { Locator, Page } from 'playwright';
+import { ReadableOptions } from 'stream';
 import { PropertySource, PropertyWithoutId } from '../../types';
-import { parsePortugueseNumber } from '../../utils';
+import { parsePortugueseNumber, sleep } from '../../utils';
+import { ScraperReadable } from '../ScraperReadable';
 import { readTextFromLocator } from '../utils';
 
 const COOKIE_BUTTON_SELECTOR = '#didomi-notice-agree-button';
 const IDEALISTA_URL = new URL('https://www.idealista.pt');
 
-export class IdealistaReadable extends Readable {
-  page: Page;
-  browser: Browser;
-  private urlsToRead: string[] = [];
-  private readProperties: PropertyWithoutId[] = [];
-
+export class IdealistaReadable extends ScraperReadable {
   constructor(options?: Omit<ReadableOptions, 'objectMode' | 'read' | 'destroy' | 'construct'>) {
-    super({
-      ...options,
-      objectMode: true,
-    });
+    super(options);
   }
 
-  protected async sleep(min = 2000, max = 4000) {
-    return new Promise((resolve) => setTimeout(resolve, randomInt(min, max)));
+  async _initialize(): Promise<void> {
+    await this.page.goto(IDEALISTA_URL.toString());
+    const cookieSelector = this.page.locator(COOKIE_BUTTON_SELECTOR);
+    await cookieSelector.waitFor({ state: 'attached' });
+    await cookieSelector.click();
+    if (!process.env.IDEALISTA_SEARCH_PAGES) throw new Error('Idealista pages are not set');
+
+    this.urlsToRead = process.env.IDEALISTA_SEARCH_PAGES.split(/\/,/);
   }
 
   private async getNextPageHelpers(page: Page) {
@@ -45,36 +43,11 @@ export class IdealistaReadable extends Readable {
     return null;
   }
 
-  async _construct(callback: (error?: Error | null | undefined) => void): Promise<void> {
-    try {
-      const browser = await firefox.launch({
-        headless: false,
-      });
-      const page = await browser.newPage();
-      await page.goto(IDEALISTA_URL.toString());
-      const cookieSelector = page.locator(COOKIE_BUTTON_SELECTOR);
-      await cookieSelector.waitFor({ state: 'attached' });
-      await cookieSelector.click();
-      this.page = page;
-      this.browser = browser;
-
-      if (!process.env.IDEALISTA_SEARCH_PAGES) throw new Error('Idealista pages are not set');
-
-      this.urlsToRead = process.env.IDEALISTA_SEARCH_PAGES.split(/\/,/);
-
-      return callback();
-    } catch (error) {
-      if (!(error instanceof Error)) return callback(new Error('Unknown error'));
-
-      return callback(error);
-    }
-  }
-
   private async readIdealistaResultsPage(): Promise<boolean> {
     const url = this.urlsToRead.shift();
     if (!url || !this.page || this.page.isClosed()) return false;
 
-    await this.sleep(1000, 2000);
+    await sleep(1000, 2000);
     await this.page.goto(url);
     await this.page.waitForSelector('section.items-container article.item');
     let { nextPageLocator, hasNextPage } = await this.getNextPageHelpers(this.page);
@@ -111,8 +84,6 @@ export class IdealistaReadable extends Readable {
           price,
           source: PropertySource.IDEALISTA,
         };
-
-        if (this.readProperties.length > 10) throw new Error('fake error');
 
         this.readProperties.push(property);
       }
