@@ -99,6 +99,7 @@ const handleExistingProperty = (
 
 export const generateDiffFromScraped = async (
   scrapedProperties: PropertyWithoutId[],
+  shouldFindRemoved: boolean,
 ): Promise<Diff[]> => {
   const repo = scraperDataSource.getRepository(PropertyEntity);
   const promises = scrapedProperties.map(async (scrapedProperty) => {
@@ -123,10 +124,13 @@ export const generateDiffFromScraped = async (
     return false;
   });
 
-  const removedItems = await repo.findBy({
-    id: Not(In(newAndChanges.filter((v) => v.type === 'changed').map((v) => v.entity.id))),
-  });
-  const deleted = removedItems.map<Diff>((entity) => ({ type: 'deleted', entity }));
+  let deleted: Diff[] = [];
+  if (shouldFindRemoved) {
+    const removedItems = await repo.findBy({
+      id: Not(In(newAndChanges.filter((v) => v.type === 'changed').map((v) => v.entity.id))),
+    });
+    deleted = removedItems.map<Diff>((entity) => ({ type: 'deleted', entity }));
+  }
 
   return [...filteredNewAndChanges, ...deleted];
 };

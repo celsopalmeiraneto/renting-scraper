@@ -1,38 +1,52 @@
 import 'reflect-metadata';
 import { scraperDataSource } from './data-sources';
-import { IdealistaScraper } from './scrapers/idealista/IdealistaScraper';
-import { ImovirtualScraper } from './scrapers/imovirtual/ImovirtualScraper';
+import { IdealistaReadable } from './scrapers/idealista/IdealistaReadable';
 import { sendStatusEmail, sendUpdateEmail } from './services/mailer';
 import { generateDiffFromScraped, persistDiffOnDb } from './services/property-diff';
+import { ImovirtualReadable } from './scrapers/imovirtual/ImovirtualReadable';
+import { PropertyWithoutId } from './types';
+import { ScraperReadable } from './scrapers/ScraperReadable';
 
-const getPropertiesFromWebsite = async (
-  Constructor: typeof ImovirtualScraper | typeof IdealistaScraper,
-) => {
-  const scraper = new Constructor();
-  try {
-    await scraper.initialize();
-    const properties = await scraper.scrape();
-    return properties;
-  } catch (error: unknown) {
-    const errorToSend = error instanceof Error ? error : new Error('Unknown error');
-    await sendStatusEmail(errorToSend);
-    return [];
-  } finally {
-    await scraper.destroy();
-  }
-};
+interface ReadPropertiesReturn {
+  properties: PropertyWithoutId[];
+  success: boolean;
+}
+
+const readProperties = <T extends ScraperReadable>(scraper: T): Promise<ReadPropertiesReturn> =>
+  new Promise((resolve) => {
+    const response: ReadPropertiesReturn = {
+      properties: [],
+      success: true,
+    };
+
+    scraper.on('data', (property: PropertyWithoutId) => {
+      response.properties.push(property);
+    });
+
+    scraper.on('error', (error) => {
+      console.error(error);
+      response.success = false;
+      return resolve(response);
+    });
+
+    scraper.on('end', () => resolve(response));
+  });
 
 const main = async () => {
   await scraperDataSource.initialize();
+  const idealistaScraper = new IdealistaReadable();
+  const imovirtualScraper = new ImovirtualReadable();
 
-  const { ENABLE_IMOVIRTUAL, ENABLE_IDEALISTA } = process.env;
+  const [imovirtualResult, idealistaResult] = await Promise.all([
+    readProperties(imovirtualScraper),
+    readProperties(idealistaScraper),
+  ]);
 
-  const properties = [
-    ...(ENABLE_IDEALISTA === 'true' ? await getPropertiesFromWebsite(IdealistaScraper) : []),
-    ...(ENABLE_IMOVIRTUAL === 'true' ? await getPropertiesFromWebsite(ImovirtualScraper) : []),
-  ];
-
-  const diffSet = await generateDiffFromScraped(properties);
+  const shouldFindRemoved = imovirtualResult.success && idealistaResult.success;
+  const diffSet = await generateDiffFromScraped(
+    [...imovirtualResult.properties, ...idealistaResult.properties],
+    shouldFindRemoved,
+  );
 
   if (diffSet.length === 0) return;
 
