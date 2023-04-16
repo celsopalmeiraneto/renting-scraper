@@ -43,6 +43,17 @@ export class IdealistaReadable extends ScraperReadable {
     return null;
   }
 
+  private async getLocation({ url, referer }: { url: string; referer: string }): Promise<string> {
+    const locationPage = await this.context.newPage();
+    await locationPage.goto(url, { referer });
+    await sleep(3000, 4000);
+    const locator = locationPage.locator('span.main-info__title-minor');
+    await locator.waitFor({ state: 'attached' });
+    await locator.scrollIntoViewIfNeeded();
+    await locationPage.close();
+    return readTextFromLocator(locator);
+  }
+
   private async readIdealistaResultsPage(): Promise<boolean> {
     const url = this.urlsToRead.shift();
     if (!url || !this.page || this.page.isClosed()) return false;
@@ -84,6 +95,12 @@ export class IdealistaReadable extends ScraperReadable {
           price,
           source: PropertySource.IDEALISTA,
         };
+
+        const location = await this.getLocation({
+          url: property.link,
+          referer: url,
+        });
+        property.location = location;
 
         this.readProperties.push(property);
       }

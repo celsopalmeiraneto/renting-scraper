@@ -1,10 +1,12 @@
 import { Browser, firefox, Page } from 'playwright';
 import { Readable, ReadableOptions } from 'stream';
 import { PropertyWithoutId } from '../types';
+import { Context } from 'vm';
 
 export abstract class ScraperReadable extends Readable {
-  page: Page;
   browser: Browser;
+  context: Context;
+  page: Page;
   protected urlsToRead: string[] = [];
   protected readProperties: PropertyWithoutId[] = [];
 
@@ -22,7 +24,8 @@ export abstract class ScraperReadable extends Readable {
       this.browser = await firefox.launch({
         headless: false,
       });
-      this.page = await this.browser.newPage({
+      this.context = await this.browser.newContext();
+      this.page = await this.context.newPage({
         screen: {
           height: 768,
           width: 1366,
