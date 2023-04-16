@@ -43,6 +43,11 @@ const main = async () => {
   ]);
 
   const shouldFindRemoved = imovirtualResult.success && idealistaResult.success;
+
+  if (!shouldFindRemoved) {
+    console.warn('Skipping removing properties because of failure!');
+  }
+
   const diffSet = await generateDiffFromScraped(
     [...imovirtualResult.properties, ...idealistaResult.properties],
     shouldFindRemoved,

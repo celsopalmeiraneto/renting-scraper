@@ -22,7 +22,12 @@ export abstract class ScraperReadable extends Readable {
       this.browser = await firefox.launch({
         headless: false,
       });
-      this.page = await this.browser.newPage();
+      this.page = await this.browser.newPage({
+        screen: {
+          height: 768,
+          width: 1366,
+        },
+      });
       await this._initialize();
 
       return callback();
