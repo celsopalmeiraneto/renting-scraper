@@ -64,6 +64,7 @@ export class IdealistaReadable extends ScraperReadable {
 
       for (const propertyLocator of await locators.all()) {
         await propertyLocator.scrollIntoViewIfNeeded();
+        await sleep(400, 800);
         const areaInM3 = await this.readAreaFromDetails(
           propertyLocator.locator('div.item-detail-char span.item-detail'),
         );
