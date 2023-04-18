@@ -126,6 +126,7 @@ export class IdealistaScraper extends Scraper<PropertyWithoutId> {
         await this.page.goto(property.link);
         const locator = this.page.locator('span.main-info__title-minor');
         await locator.waitFor({ state: 'attached' });
+
         property.location = await readTextFromLocator(locator);
       } catch (err) {
         console.error(err);
