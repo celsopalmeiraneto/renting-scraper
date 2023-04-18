@@ -19,6 +19,8 @@ export abstract class ScraperReadable extends Readable {
 
   abstract _initialize(): Promise<void>;
 
+  abstract readResultsPage(): Promise<boolean>;
+
   async _construct(callback: (error?: Error | null | undefined) => void): Promise<void> {
     try {
       this.browser = await firefox.launch({
@@ -39,5 +41,35 @@ export abstract class ScraperReadable extends Readable {
 
       return callback(error);
     }
+  }
+
+  private flushReadProperties() {
+    let keepPushing = true;
+    while (keepPushing && this.readProperties.length > 0) {
+      const property = this.readProperties.shift();
+      if (property) {
+        keepPushing = this.push(property);
+      }
+    }
+  }
+
+  async _read() {
+    try {
+      await this.readResultsPage();
+      const property = this.readProperties.shift();
+      this.push(property ?? null);
+    } catch (error) {
+      this.flushReadProperties();
+      if (error instanceof Error) return this.destroy(error);
+      return this.destroy(new Error('Unknown error'));
+    }
+  }
+
+  async _destroy(
+    error: Error | null,
+    callback: (error?: Error | null | undefined) => void,
+  ): Promise<void> {
+    await this.browser.close();
+    return callback(error);
   }
 }

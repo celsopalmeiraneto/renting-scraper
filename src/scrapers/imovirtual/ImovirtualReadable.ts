@@ -50,7 +50,7 @@ export class ImovirtualReadable extends ScraperReadable {
     return text.split(':')[1]?.trim();
   }
 
-  private async readImovirtualResultsPage(): Promise<boolean> {
+  async readResultsPage(): Promise<boolean> {
     const url = this.urlsToRead.shift();
     if (!url || !this.page || this.page.isClosed()) return false;
     if (!process.env.IMOVIRTUAL_SEARCH_INITIAL_PAGE) throw new Error('Imovirtual page is not set');
@@ -107,35 +107,5 @@ export class ImovirtualReadable extends ScraperReadable {
         return true;
       }
     } while (true);
-  }
-
-  private flushReadProperties() {
-    let keepPushing = true;
-    while (keepPushing && this.readProperties.length > 0) {
-      const property = this.readProperties.shift();
-      if (property) {
-        keepPushing = this.push(property);
-      }
-    }
-  }
-
-  async _read() {
-    try {
-      await this.readImovirtualResultsPage();
-      const property = this.readProperties.shift();
-      this.push(property ?? null);
-    } catch (error) {
-      this.flushReadProperties();
-      if (error instanceof Error) return this.destroy(error);
-      return this.destroy(new Error('Unknown error'));
-    }
-  }
-
-  async _destroy(
-    error: Error | null,
-    callback: (error?: Error | null | undefined) => void,
-  ): Promise<void> {
-    await this.browser.close();
-    return callback(error);
   }
 }
