@@ -1,5 +1,5 @@
 {
-  "name": "template-node-ts",
+  "name": "renting-scraper",
   "version": "2.0.0",
   "description": "",
   "main": "dist/src/index.js",
@@ -9,17 +9,18 @@
     "test": "lab --verbose",
     "build": "tsc",
     "lint": "eslint src/**",
-    "local": "npm run build && npm run start"
+    "local": "npm run build && npm run start | bunyan"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/celsopalmeiraneto/template-node-ts.git"
+    "url": "git+https://github.com/celsopalmeiraneto/renting-scraper.git"
   },
   "author": "Celso Palmeira Neto",
-  "homepage": "https://github.com/celsopalmeiraneto/template-node-ts#readme",
+  "homepage": "https://github.com/celsopalmeiraneto/renting-scraper#readme",
   "devDependencies": {
     "@hapi/code": "9.0.3",
     "@hapi/lab": "25.1.2",
+    "@types/bunyan": "1.8.8",
     "@types/lodash": "4.14.191",
     "@types/node": "18.15.5",
     "@types/nodemailer": "6.4.7",
@@ -34,6 +35,7 @@
     "typescript": "4.9.4"
   },
   "dependencies": {
+    "bunyan": "1.8.15",
     "handlebars": "4.7.7",
     "lodash": "4.17.21",
     "nodemailer": "6.9.1",

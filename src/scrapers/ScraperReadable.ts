@@ -2,6 +2,9 @@ import { Browser, firefox, Page } from 'playwright';
 import { Readable, ReadableOptions } from 'stream';
 import { PropertyWithoutId } from '../types';
 import { Context } from 'vm';
+import { log } from '../logger';
+
+const readableLog = log.child({ identifier: 'ScraperReadable' });
 
 export abstract class ScraperReadable extends Readable {
   browser: Browser;
@@ -32,6 +35,7 @@ export abstract class ScraperReadable extends Readable {
 
       return callback();
     } catch (error) {
+      readableLog.error({ error, location: '_construct' });
       if (!(error instanceof Error)) return callback(new Error('Unknown error'));
 
       return callback(error);
@@ -51,9 +55,14 @@ export abstract class ScraperReadable extends Readable {
   async _read() {
     try {
       await this.readResultsPage();
+      readableLog.info({
+        location: '_read',
+        msg: `${this.readProperties.length} properties on buffer.`,
+      });
       const property = this.readProperties.shift();
       this.push(property ?? null);
     } catch (error) {
+      readableLog.error({ error, location: '_read' });
       this.flushReadProperties();
       if (error instanceof Error) return this.destroy(error);
       return this.destroy(new Error('Unknown error'));

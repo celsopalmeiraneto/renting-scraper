@@ -2,6 +2,8 @@ import { In, Not } from 'typeorm';
 import { scraperDataSource } from '../data-sources';
 import { PropertyEntity } from '../entities/PropertyEntity';
 import { Property, PropertyWithoutId } from '../types';
+import { log } from '../logger';
+import { logger } from 'handlebars';
 
 type ChangesInProperty = {
   [Prop in keyof Property]?: {
@@ -136,23 +138,28 @@ export const generateDiffFromScraped = async (
 };
 
 export const persistDiffOnDb = async (diffSet: Diff[]) => {
+  const logDiff = log.child({ identifier: 'persistDiffOnDb', location: 'persistDiffOnDb' });
   const repo = scraperDataSource.getRepository(PropertyEntity);
   const promises = diffSet.map(async (item) => {
-    if (item.type === 'changed') {
-      const newValues = Object.entries(item.changes).reduce((acc, [key, value]) => {
-        acc[key] = value.newValue;
-        return acc;
-      }, {} as Record<string, unknown>);
+    try {
+      if (item.type === 'changed') {
+        const newValues = Object.entries(item.changes).reduce((acc, [key, value]) => {
+          acc[key] = value.newValue;
+          return acc;
+        }, {} as Record<string, unknown>);
 
-      await repo.update({ id: item.entity.id }, newValues);
-    }
+        await repo.update({ id: item.entity.id }, newValues);
+      }
 
-    if (item.type === 'deleted') {
-      await repo.delete({ id: item.entity.id });
-    }
+      if (item.type === 'deleted') {
+        await repo.delete({ id: item.entity.id });
+      }
 
-    if (item.type === 'new') {
-      await repo.insert(item.entity);
+      if (item.type === 'new') {
+        await repo.insert(item.entity);
+      }
+    } catch (error) {
+      logDiff.error({ error, item });
     }
   });
 

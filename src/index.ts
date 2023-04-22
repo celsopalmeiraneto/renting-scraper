@@ -6,6 +6,7 @@ import { generateDiffFromScraped, persistDiffOnDb } from './services/property-di
 import { ImovirtualReadable } from './scrapers/imovirtual/ImovirtualReadable';
 import { PropertyWithoutId } from './types';
 import { ScraperReadable } from './scrapers/ScraperReadable';
+import { initializeLogger, log } from './logger';
 
 interface ReadPropertiesReturn {
   properties: PropertyWithoutId[];
@@ -33,6 +34,9 @@ const readProperties = <T extends ScraperReadable>(scraper: T): Promise<ReadProp
   });
 
 const main = async () => {
+  await initializeLogger();
+  log.info('Starting process');
+  log.info('Initializing DataSource and Readables');
   await scraperDataSource.initialize();
   const idealistaScraper = new IdealistaReadable();
   const imovirtualScraper = new ImovirtualReadable();
@@ -44,8 +48,12 @@ const main = async () => {
 
   const shouldFindRemoved = imovirtualResult.success && idealistaResult.success;
 
+  log.info(
+    `${imovirtualResult.properties.length + idealistaResult.properties.length} properties read.`,
+  );
+
   if (!shouldFindRemoved) {
-    console.warn('Skipping removing properties because of failure!');
+    log.warn('Skipping removing properties because of failure while reading!');
   }
 
   const diffSet = await generateDiffFromScraped(
@@ -57,10 +65,12 @@ const main = async () => {
 
   await sendUpdateEmail(diffSet);
   await persistDiffOnDb(diffSet);
+  log.info('Process completed');
 };
 
 (async () => {
   await main().catch(async (error) => {
+    console.log(error);
     await sendStatusEmail(error);
   });
 })();
