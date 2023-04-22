@@ -1,7 +1,7 @@
 import { Locator, Page } from 'playwright';
 import { ReadableOptions } from 'stream';
 import { PropertySource, PropertyWithoutId } from '../../types';
-import { parsePortugueseNumber, sleep } from '../../utils';
+import { parsePortugueseNumber, removeFragmentFromUrl, sleep } from '../../utils';
 import { ScraperReadable } from '../ScraperReadable';
 import { readTextFromLocator } from '../utils';
 
@@ -71,7 +71,9 @@ export class ImovirtualReadable extends ScraperReadable {
           propertyLocator.locator('span.offer-item-title'),
         );
         const id = (await propertyLocator.getAttribute('data-item-id')) ?? '';
-        const link = (await propertyLocator.locator('a').first().getAttribute('href')) ?? '';
+        const linkWithFragment =
+          (await propertyLocator.locator('a').first().getAttribute('href')) ?? null;
+        const link = linkWithFragment ? removeFragmentFromUrl(linkWithFragment) : '';
         const price =
           parsePortugueseNumber(
             await readTextFromLocator(propertyLocator.locator('.offer-item-price')),

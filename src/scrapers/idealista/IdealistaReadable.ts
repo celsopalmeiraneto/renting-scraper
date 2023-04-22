@@ -1,7 +1,7 @@
 import { Locator, Page } from 'playwright';
 import { ReadableOptions } from 'stream';
 import { PropertySource, PropertyWithoutId } from '../../types';
-import { parsePortugueseNumber, sleep } from '../../utils';
+import { parsePortugueseNumber, removeFragmentFromUrl, sleep } from '../../utils';
 import { ScraperReadable } from '../ScraperReadable';
 import { readTextFromLocator } from '../utils';
 
@@ -87,7 +87,7 @@ export class IdealistaReadable extends ScraperReadable {
           description,
           energyCertification,
           externalId: id,
-          link: new URL(link, IDEALISTA_URL.toString()).toString(),
+          link: removeFragmentFromUrl(new URL(link, IDEALISTA_URL.toString())),
           location: this.readLocationFromDescription(description),
           price,
           source: PropertySource.IDEALISTA,
