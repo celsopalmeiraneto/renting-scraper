@@ -24,7 +24,7 @@ export abstract class ScraperReadable extends Readable {
   async _construct(callback: (error?: Error | null | undefined) => void): Promise<void> {
     try {
       this.browser = await firefox.launch({
-        headless: true,
+        headless: process.env.HEADLESS === 'false' ? false : true,
       });
       this.context = await this.browser.newContext();
       this.page = await this.context.newPage();
