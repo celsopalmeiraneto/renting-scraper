@@ -2,18 +2,20 @@ import { compile } from 'handlebars';
 import { sortBy } from 'lodash';
 import { createTransport } from 'nodemailer';
 import { Diff } from './property-diff';
+import { log } from '../logger';
 
+type ChangeMailing = {
+  attribute: 'Area' | 'Energy Certification' | 'Location' | 'Price' | 'Link' | 'Relisted';
+  oldValue?: string;
+  hasOldValue: boolean;
+  newValue: string;
+} | null;
 interface DiffForMailing {
   typeOfChange: 'New' | 'Changed' | 'Deleted';
   link: string;
   description: string;
   price: string;
-  changes: ({
-    attribute: 'Area' | 'Energy Certification' | 'Location' | 'Price' | 'Link';
-    oldValue?: string;
-    hasOldValue: boolean;
-    newValue: string;
-  } | null)[];
+  changes: ChangeMailing[];
 }
 
 /* eslint-disable max-len */
@@ -26,7 +28,7 @@ const templateText = `
     <table>
       {{#each changes}}
         <tr>
-          <td>{{attribute}}:</td><td>{{newValue}}</td><td>{{#if hasOldValue}}Previously: {{oldValue}}{{/if}}</td>
+          <td><strong>{{attribute}}</strong></td><td>{{newValue}}</td><td>{{#if hasOldValue}}Previously: {{oldValue}}{{/if}}</td>
         </tr>
       {{/each}}
     </table>
@@ -56,6 +58,7 @@ const sendEmail = async (subject: string, html: string) => {
     subject,
     html,
   });
+  log.info('Email has been sent');
 };
 
 const convertDiffChangeToMailDiffChange = (type: Diff['type']): DiffForMailing['typeOfChange'] => {
@@ -100,7 +103,7 @@ export const sendUpdateEmail = async (diffSet: Diff[]) => {
         }
       : null;
 
-    const energyCertificationChange: DiffForMailing['changes'][0] = changes?.energyCertification
+    const energyCertificationChange: ChangeMailing = changes?.energyCertification
       ? {
           attribute: 'Energy Certification',
           newValue: changes.energyCertification.newValue ?? '',
@@ -109,7 +112,7 @@ export const sendUpdateEmail = async (diffSet: Diff[]) => {
         }
       : null;
 
-    const locationChange: DiffForMailing['changes'][0] = changes?.location
+    const locationChange: ChangeMailing = changes?.location
       ? {
           attribute: 'Location',
           newValue: changes.location.newValue ?? '',
@@ -118,7 +121,7 @@ export const sendUpdateEmail = async (diffSet: Diff[]) => {
         }
       : null;
 
-    const priceChange: DiffForMailing['changes'][0] = changes?.price
+    const priceChange: ChangeMailing = changes?.price
       ? {
           attribute: 'Price',
           newValue: changes.price.newValue ? EURO_FORMATTER.format(changes.price.newValue) : '',
@@ -129,7 +132,7 @@ export const sendUpdateEmail = async (diffSet: Diff[]) => {
         }
       : null;
 
-    const linkChange: DiffForMailing['changes'][0] = changes?.link
+    const linkChange: ChangeMailing = changes?.link
       ? {
           attribute: 'Link',
           newValue: changes.link.newValue ?? '',
@@ -138,12 +141,23 @@ export const sendUpdateEmail = async (diffSet: Diff[]) => {
         }
       : null;
 
+    const relistedChange: ChangeMailing =
+      diff.type === 'changed' && diff.relisted
+        ? {
+            attribute: 'Relisted',
+            newValue: '',
+            hasOldValue: false,
+            oldValue: undefined,
+          }
+        : null;
+
     return {
       typeOfChange: convertDiffChangeToMailDiffChange(diff.type),
       description,
       link,
       price: EURO_FORMATTER.format(price),
       changes: [
+        relistedChange,
         areaChange,
         energyCertificationChange,
         locationChange,

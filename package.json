@@ -9,7 +9,8 @@
     "test": "lab --verbose",
     "build": "tsc",
     "lint": "eslint src/**",
-    "local": "npm run build && npm run start | bunyan",
+    "prelocal": "npm run build",
+    "local": "npm run start | bunyan",
     "migrate": "typeorm migration:run -d ./dist/src/data-sources.js"
   },
   "repository": {

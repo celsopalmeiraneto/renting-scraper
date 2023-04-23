@@ -3,7 +3,6 @@ import { scraperDataSource } from '../data-sources';
 import { PropertyEntity } from '../entities/PropertyEntity';
 import { Property, PropertyWithoutId } from '../types';
 import { log } from '../logger';
-import { logger } from 'handlebars';
 
 type ChangesInProperty = {
   [Prop in keyof Property]?: {
@@ -16,6 +15,7 @@ export type Diff =
   | {
       type: 'changed';
       entity: PropertyEntity;
+      relisted: boolean;
       changes: ChangesInProperty;
     }
   | {
@@ -96,6 +96,7 @@ const handleExistingProperty = (
 ): Diff => ({
   type: 'changed',
   entity: propertyOnDb,
+  relisted: !!propertyOnDb.deletedAt,
   changes: computeChangesFromDb(scrapedProperty, propertyOnDb),
 });
 
@@ -110,6 +111,7 @@ export const generateDiffFromScraped = async (
         source: scrapedProperty.source,
         externalId: scrapedProperty.externalId,
       },
+      withDeleted: true,
     });
 
     if (!propertyOnDb) return handleNonExistingProperty(scrapedProperty);
@@ -121,7 +123,7 @@ export const generateDiffFromScraped = async (
   const filteredNewAndChanges = newAndChanges.filter((diff) => {
     if (diff.type !== 'changed') return true;
 
-    if (Object.keys(diff.changes).length > 0) return true;
+    if (diff.relisted || Object.keys(diff.changes).length > 0) return true;
 
     return false;
   });
@@ -147,7 +149,9 @@ export const persistDiffOnDb = async (diffSet: Diff[]) => {
           acc[key] = value.newValue;
           return acc;
         }, {} as Record<string, unknown>);
-
+        if (item.relisted) {
+          await repo.restore({ id: item.entity.id });
+        }
         await repo.update({ id: item.entity.id }, newValues);
       }
 

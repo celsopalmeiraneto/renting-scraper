@@ -70,7 +70,7 @@ const main = async () => {
 
 (async () => {
   await main().catch(async (error) => {
-    console.log(error);
+    log.error(error);
     await sendStatusEmail(error);
   });
 })();
