@@ -156,7 +156,7 @@ export const persistDiffOnDb = async (diffSet: Diff[]) => {
       }
 
       if (item.type === 'deleted') {
-        await repo.delete({ id: item.entity.id });
+        await repo.softDelete({ id: item.entity.id });
       }
 
       if (item.type === 'new') {
