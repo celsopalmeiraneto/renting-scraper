@@ -144,22 +144,32 @@ export const persistDiffOnDb = async (diffSet: Diff[]) => {
   const repo = scraperDataSource.getRepository(PropertyEntity);
   const promises = diffSet.map(async (item) => {
     try {
+      const debugSummary = {
+        id: item.entity.id,
+        externalId: item.entity.externalId,
+        source: item.entity.source,
+      };
+
       if (item.type === 'changed') {
         const newValues = Object.entries(item.changes).reduce((acc, [key, value]) => {
           acc[key] = value.newValue;
           return acc;
         }, {} as Record<string, unknown>);
         if (item.relisted) {
+          logDiff.debug(debugSummary, 'Restoring item.');
           await repo.restore({ id: item.entity.id });
         }
+        logDiff.debug(debugSummary, 'Updating item.');
         await repo.update({ id: item.entity.id }, newValues);
       }
 
       if (item.type === 'deleted') {
+        logDiff.debug(debugSummary, 'Deleting item.');
         await repo.softDelete({ id: item.entity.id });
       }
 
       if (item.type === 'new') {
+        logDiff.debug('Inserting item.');
         await repo.insert(item.entity);
       }
     } catch (error) {

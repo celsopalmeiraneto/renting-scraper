@@ -55,11 +55,10 @@ export abstract class ScraperReadable extends Readable {
   async _read() {
     try {
       await this.readResultsPage();
-      readableLog.info({
-        location: '_read',
-        msg: `${this.readProperties.length} properties on buffer.`,
-      });
       const property = this.readProperties.shift();
+      if (property) {
+        property.externalId = property.externalId.trim();
+      }
       this.push(property ?? null);
     } catch (error) {
       readableLog.error({ error, location: '_read' });
