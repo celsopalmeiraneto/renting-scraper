@@ -11,6 +11,7 @@
     "lint": "eslint src/**",
     "prelocal": "npm run build",
     "local": "npm run start | bunyan",
+    "premigrate": "npm run build",
     "migrate": "typeorm migration:run -d ./dist/src/data-sources.js"
   },
   "repository": {
